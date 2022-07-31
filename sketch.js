@@ -10,6 +10,8 @@ let excLifetime = 700
 let oscillators = []
 let audioContextStarted = false
 
+let midiOut = null
+
 let notes = [
 	{
 		noteName: 'A#',
@@ -57,6 +59,7 @@ function setup() {
 	let cnv = createCanvas(windowWidth, windowHeight)
 
 	let reverb = new p5.Reverb()
+
 	// for (let i = 0; i < 100; i++) {
 	// 	exciters.push(new Exciter(width/2, height/2))
 	// }
@@ -69,6 +72,11 @@ function setup() {
 
 	// 	console.log(point)
 	// }
+
+	WebMidi
+		.enable()
+		.then(onMidiEnabled)
+ 	 	.catch(err => alert(err));
 
 	for (let i=0; i < notes.length; i++) {
 		floorTiles.push(new FloorTile(0 + (width/notes.length * i), notes[i], reverb))
@@ -94,7 +102,7 @@ function draw() {
 	// stroke(255)
 
 	// Trail
-	console.log(trailLifetime)
+	// console.log(trailLifetime)
 	trailLifetime -= 1
 	// fill(trailLifetime)
 	stroke(trailLifetime)
@@ -223,7 +231,7 @@ class Exciter {
 class FloorTile {
 	constructor(x, note, reverb) {
 		this.pos = createVector(x, window.height-40)
-		this.width = window.width / 7
+		this.width = window.width / notes.length
 		this.height = 40
 		this.fillVal = 200
 		this.note = note
@@ -254,6 +262,10 @@ class FloorTile {
 		this.env.setRange(velocity, 0)
 		// this.env.setRange(0.1, 0)
 		this.env.play()
+
+		if (midiOut) {
+			midiOut.channels[1].playNote("C3", {duration: 1000});
+		}
 	}
 
 	intersects(other) {
@@ -303,3 +315,17 @@ class FloorTile {
 // 		point(this.x, this.y)
 // 	}
 // }
+
+function onMidiEnabled() {
+  console.log("WebMidi enabled!") 
+
+  // Inputs
+  console.log("Inputs:") 
+  WebMidi.inputs.forEach(input => console.log(input.manufacturer, input.name));
+  
+  // Outputs
+  console.log("Outputs:") 
+  WebMidi.outputs.forEach(output => console.log(output.manufacturer, output.name));
+
+  midiOut = WebMidi.getOutputByName("loopMIDI Port");
+}
