@@ -1,9 +1,5 @@
 // let brushStrokes
 // let numPoints = 20;
-
-//Fonts
-let dudler, emeritus;
-
 let points = []
 let exciters = []
 let floorTiles = []
@@ -57,11 +53,6 @@ let notes = [
 	}
 ]
 
-function preload() {
-	dudler = loadFont('assets/Dudler-Regular.woff');
-	emeritus = loadFont('assets/Emeritus-Display.woff');
-  }
-
 function setup() {
 	let cnv = createCanvas(windowWidth, windowHeight)
 
@@ -91,7 +82,7 @@ function draw() {
 	background('Black')
 	fill(255)
 	textSize(48)
-	textFont(emeritus)
+	textFont('Emeritus Display')
 	text('Exciters', width - 200, 55)
 
 	// brushStrokes.forEach(brushStroke => {
@@ -312,7 +303,7 @@ class FloorTile {
 		rect(this.pos.x, this.pos.y, this.width, this.height)
 		fill(255 - this.fillVal)
 		textSize(16)
-		textFont((dudler))
+		textFont(('Dudler'))
 		text(this.note.noteName, this.pos.x + 10, this.pos.y + 26)
 	}
 
