@@ -251,7 +251,7 @@ class Exciter {
 class FloorTile {
 	constructor(x, note, reverb) {
 		this.pos = createVector(x, window.height-40)
-		this.width = window.width / 7
+		this.width = window.width / notes.length
 		this.height = 40
 		this.fillVal = 200
 		this.note = note
