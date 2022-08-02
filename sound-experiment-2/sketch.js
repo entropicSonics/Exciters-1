@@ -1,10 +1,5 @@
 // let brushStrokes
 // let numPoints = 20;
-let MIDI_MODE = true
-
-//Fonts
-let dudler, emeritus;
-
 let points = []
 let exciters = []
 let floorTiles = []
@@ -14,8 +9,6 @@ let excLifetime = 800
 
 let oscillators = []
 let audioContextStarted = false
-
-let midiOut = null
 
 let notes = [
 	{
@@ -60,24 +53,10 @@ let notes = [
 	}
 ]
 
-function preload() {
-	dudler = loadFont('assets/Dudler-Regular.woff');
-	emeritus = loadFont('assets/Emeritus-Display.woff');
-  }
-
 function setup() {
 	let cnv = createCanvas(windowWidth, windowHeight)
 
-	let reverb = null
-	if (MIDI_MODE) {
-		WebMidi
-			.enable()
-			.then(onMidiEnabled)
- 		 	.catch(err => alert(err));
-	} else {
-		reverb = new p5.Reverb()
-	}
-
+	let reverb = new p5.Reverb()
 	// for (let i = 0; i < 100; i++) {
 	// 	exciters.push(new Exciter(width/2, height/2))
 	// }
@@ -94,6 +73,8 @@ function setup() {
 	for (let i=0; i < notes.length; i++) {
 		floorTiles.push(new FloorTile(0 + (width/notes.length * i), notes[i], reverb))
 	}
+
+	
 }
 
 function draw() {
@@ -101,7 +82,7 @@ function draw() {
 	background('Black')
 	fill(255)
 	textSize(48)
-	textFont(emeritus)
+	textFont('Emeritus Display')
 	text('Exciters', width - 200, 55)
 
 	// brushStrokes.forEach(brushStroke => {
@@ -120,7 +101,7 @@ function draw() {
 	// stroke(255)
 
 	// Trail
-	// console.log(trailLifetime)
+	console.log(trailLifetime)
 	trailLifetime -= 1
 	// fill(trailLifetime)
 	stroke(trailLifetime)
@@ -164,21 +145,14 @@ function draw() {
 }
 
 function mouseClicked() {
-	if (!MIDI_MODE) {
-		if (!audioContextStarted) {
-			userStartAudio();
-			audioContextStarted = true
-			for (osc of oscillators) {
-				osc.start()
-			}
-		}
-	}
+	userStartAudio();
 
 	exciters.push(new Exciter(mouseX, mouseY, excLifetime))
 }
 
 function mouseDragged() {
 	// brushStrokes.push(new BrushStroke(mouseX, mouseY))
+	userStartAudio();
 
 	trailLifetime = 400
 
@@ -202,6 +176,12 @@ function mouseDragged() {
 }
 
 function mousePressed() {
+	if (!audioContextStarted) {
+		audioContextStarted = true
+		for (osc of oscillators) {
+			osc.start()
+		}
+	}
 	if (mouseX < window.width && mouseY < window.height) {
 		points = []
 	}
@@ -226,14 +206,9 @@ class Exciter {
 	edges() {
 		if (this.pos.y >= height - 40) {
 			this.pos.y = height - 40
-			if (this.vel.y > 2) {
-				// this.vel.x = random(5, -5)
-				this.vel.x = random(-this.vel.y * 0.5, this.vel.y * 0.5)
-			} else {
-				this.vel.x = 0
-			}
-			// this.vel.y *= -1.5
-			this.vel.y *= -0.93
+			this.vel.y *= -1.5
+			this.vel.x = random(5, -5)
+			// this.vel.y *= -0.93
 		}
 
 		if (this.pos.x < 0 || this.pos.x > width) {
@@ -249,7 +224,7 @@ class Exciter {
 		// this.acc.setMag(1)
 
 		this.vel.add(this.acc)
-		this.vel.limit(20)
+		this.vel.limit(15)
 	
 		this.pos.add(this.vel)
 
@@ -267,49 +242,37 @@ class Exciter {
 class FloorTile {
 	constructor(x, note, reverb) {
 		this.pos = createVector(x, window.height-40)
-		this.width = window.width / notes.length
+		this.width = window.width / 7
 		this.height = 40
 		this.fillVal = 200
 		this.note = note
 		this.hit = false
 
-		if (!MIDI_MODE) {
-			this.env = new p5.Envelope()
+		this.env = new p5.Envelope()
 		
-			this.osc = new p5.Oscillator()
-			this.osc.setType('triangle')
-			// this.osc.start()
-			this.osc.freq(midiToFreq(this.note.val + 12))
-			this.osc.amp(this.env, 0)
-			oscillators.push(this.osc)
+		
+		this.osc = new p5.Oscillator()
+		this.osc.setType('triangle')
+		// this.osc.start()
+		this.osc.freq(midiToFreq(this.note.val + 12))
+		this.osc.amp(this.env, 0)
+		oscillators.push(this.osc)
 
-			reverb.process(this.osc)
-		}
+		reverb.process(this.osc)
 
 		this.playing = false
 	}
 
-	onHit(other) {
-		let velocity = (other.lifetime / excLifetime)**3 // velocity is between 0 and 1
-
+	onHit(velocity) { // velocity is between 0 and 1
 		this.fillVal = 255 * min(1, sqrt(velocity * 5))
 
 		// console.log(velocity)
 		
-		if (Math.abs(other.vel.y) > 2) {
-			// this.env.setADSR(random(0, 0.2), 0.0, 0.1, 0.5) // RANDOM ATTACK
-
-			if (MIDI_MODE) {
-				if (midiOut) {
-					midiOut.channels[1].playNote(this.note.val, {duration: 1000, attack: velocity});
-				}
-			} else {
-				this.env.setADSR(0.2 * max(0, 0.9-velocity), 0.0, 0.1, 0.5) // GRADUAL ATTACK SLOWDOWN
-				this.env.setRange(velocity, 0)
-				// this.env.setRange(0.1, 0)
-				this.env.play()
-			}
-		}
+		// this.env.setADSR(random(0, 0.2), 0.0, 0.1, 0.5) // RANDOM ATTACK
+		this.env.setADSR(0.2 * max(0, 0.9-velocity), 0.0, 0.1, 0.5) // GRADUAL ATTACK SLOWDOWN
+		this.env.setRange(velocity, 0)
+		// this.env.setRange(0.1, 0)
+		this.env.play()
 	}
 
 	intersects(other) {
@@ -322,7 +285,7 @@ class FloorTile {
 
 		if (this.hit == true) {
 			// console.log(this.note)
-			this.onHit(other)
+			this.onHit((other.lifetime / excLifetime)**3)
 		} else { 
 			console.log('Nothing is hit')
 		}
@@ -340,7 +303,7 @@ class FloorTile {
 		rect(this.pos.x, this.pos.y, this.width, this.height)
 		fill(255 - this.fillVal)
 		textSize(16)
-		textFont((dudler))
+		textFont(('Dudler'))
 		text(this.note.noteName, this.pos.x + 10, this.pos.y + 26)
 	}
 
@@ -360,17 +323,3 @@ class FloorTile {
 // 		point(this.x, this.y)
 // 	}
 // }
-
-function onMidiEnabled() {
-  console.log("WebMidi enabled!") 
-
-  // Inputs
-  console.log("Inputs:") 
-  WebMidi.inputs.forEach(input => console.log(input.manufacturer, input.name));
-  
-  // Outputs
-  console.log("Outputs:") 
-  WebMidi.outputs.forEach(output => console.log(output.manufacturer, output.name));
-
-  midiOut = WebMidi.getOutputByName("loopMIDI Port");
-}
