@@ -215,9 +215,14 @@ class Exciter {
 	edges() {
 		if (this.pos.y >= height - 40) {
 			this.pos.y = height - 40
-			this.vel.y *= -1.5
-			this.vel.x = random(5, -5)
-			// this.vel.y *= -0.93
+			if (this.vel.y > 2) {
+				// this.vel.x = random(5, -5)
+				this.vel.x = random(-this.vel.y * 0.5, this.vel.y * 0.5)
+			} else {
+				this.vel.x = 0
+			}
+			// this.vel.y *= -1.5
+			this.vel.y *= -0.93
 		}
 
 		if (this.pos.x < 0 || this.pos.x > width) {
@@ -233,7 +238,7 @@ class Exciter {
 		// this.acc.setMag(1)
 
 		this.vel.add(this.acc)
-		this.vel.limit(15)
+		this.vel.limit(20)
 	
 		this.pos.add(this.vel)
 
@@ -272,16 +277,21 @@ class FloorTile {
 		this.playing = false
 	}
 
-	onHit(velocity) { // velocity is between 0 and 1
+	onHit(other) {
+		let velocity = (other.lifetime / excLifetime)**3 // velocity is between 0 and 1
+
 		this.fillVal = 255 * min(1, sqrt(velocity * 5))
 
 		// console.log(velocity)
 		
-		// this.env.setADSR(random(0, 0.2), 0.0, 0.1, 0.5) // RANDOM ATTACK
-		this.env.setADSR(0.2 * max(0, 0.9-velocity), 0.0, 0.1, 0.5) // GRADUAL ATTACK SLOWDOWN
-		this.env.setRange(velocity, 0)
-		// this.env.setRange(0.1, 0)
-		this.env.play()
+		if (Math.abs(other.vel.y) > 2) {
+			// this.env.setADSR(random(0, 0.2), 0.0, 0.1, 0.5) // RANDOM ATTACK
+
+			this.env.setADSR(0.2 * max(0, 0.9-velocity), 0.0, 0.1, 0.5) // GRADUAL ATTACK SLOWDOWN
+			this.env.setRange(velocity, 0)
+			// this.env.setRange(0.1, 0)
+			this.env.play()
+		}
 	}
 
 	intersects(other) {
@@ -294,7 +304,7 @@ class FloorTile {
 
 		if (this.hit == true) {
 			// console.log(this.note)
-			this.onHit((other.lifetime / excLifetime)**3)
+			this.onHit(other)
 		} else { 
 			console.log('Nothing is hit')
 		}
