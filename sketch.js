@@ -301,7 +301,7 @@ class FloorTile {
 
 			if (MIDI_MODE) {
 				if (midiOut) {
-					midiOut.channels[1].playNote(this.note.val, {duration: 1000, attack: velocity});
+					midiOut.channels[1].playNote(this.note.val, {duration: 100, attack: velocity});
 				}
 			} else {
 				this.env.setADSR(0.2 * max(0, 0.9-velocity), 0.0, 0.1, 0.5) // GRADUAL ATTACK SLOWDOWN
