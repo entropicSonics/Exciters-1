@@ -60,6 +60,27 @@ let notes = [
 	}
 ]
 
+let hold_button = null
+let hold = false
+let exciter_history = createRingBuffer(120);
+
+function createRingBuffer (length) {
+  var pointer = 0, buffer = []; 
+  return {
+    get  : function(){return buffer[pointer];},
+    push : function(item){
+      buffer[pointer] = item;
+      pointer = (length + pointer +1) % length;
+    },
+	inc : function(item){
+      pointer = (length + pointer +1) % length;
+	},
+	log_buffer : function() {
+		console.log(buffer)
+	}
+  };
+};
+
 function preload() {
 	dudler = loadFont('assets/Dudler-Regular.woff');
 	emeritus = loadFont('assets/Emeritus-Display.woff');
@@ -94,6 +115,14 @@ function setup() {
 	for (let i=0; i < notes.length; i++) {
 		floorTiles.push(new FloorTile(0 + (width/notes.length * i), notes[i], reverb))
 	}
+
+	hold_button = createButton("HOLD");
+    hold_button.mouseClicked(holdToggle);
+    hold_button.position(10, 10);
+	hold_button.style('font-size', '24px');
+	hold_button.style('color', '#000000');
+	hold_button.style('background-color', '#ffffff');
+	hold_button.style('font-family', 'Dudler-Regular')
 }
 
 function draw() {
@@ -135,18 +164,44 @@ function draw() {
 	endShape()
 
 	// Exciters
-	for (let exciter of exciters) {
-		let gravity = createVector(0, 0.5 )
-		exciter.applyForce(gravity)
-		exciter.update()
-		exciter.edges()
-		exciter.show()	
-	}
-
-	for (let i = exciters.length-1; i >=0; i--) {
-		if (exciters[i].finished()) {
-			exciters.splice(i, 1)
+	if (!hold) {
+		for (let exciter of exciters) {
+			gravity = createVector(0, 0.5)
+			exciter.applyForce(gravity)
+			exciter.update()
+			exciter.edges()
+			exciter.show()	
 		}
+
+		for (let i = exciters.length-1; i >=0; i--) {
+			if (exciters[i].finished()) {
+				exciters.splice(i, 1)
+			}
+		}
+
+		// TODO: implement a more efficient way to store history
+		exciters_deep_copy = []
+		for (let exciter of exciters) {
+			exciter_copy = {}
+			exciter_copy.pos = exciter.pos.copy()
+			exciter_copy.vel = exciter.vel.copy()
+			exciter_copy.acc = exciter.acc.copy()
+			exciter_copy.lifetime = exciter.lifetime
+			exciter_copy.show = exciter.show
+			exciter_copy.finished = exciter.finished
+			exciter_copy.applyForce = exciter.applyForce
+			exciter_copy.edges = exciter.edges
+			exciter_copy.update = exciter.update
+			exciters_deep_copy.push(exciter_copy)
+		}
+		exciter_history.push(exciters_deep_copy)
+		// exciter_history.push(structuredClone(exciters))
+	} else {
+		exciters = exciter_history.get()
+		for (let exciter of exciters) {
+			exciter.show()	
+		}
+		exciter_history.inc()
 	}
 
 	// Floor tiles
@@ -154,7 +209,7 @@ function draw() {
 		floorTiles[floorTile].show()
 	}
 
-	
+	// Check for intersections
 	for (let exciter in exciters) {
 		for (let floorTile in floorTiles) {
 			floorTiles[floorTile].intersects(exciters[exciter])
@@ -323,9 +378,7 @@ class FloorTile {
 		if (this.hit == true) {
 			// console.log(this.note)
 			this.onHit(other)
-		} else { 
-			console.log('Nothing is hit')
-		}
+		} 
 	}
 
 	show() {
@@ -373,4 +426,13 @@ function onMidiEnabled() {
   WebMidi.outputs.forEach(output => console.log(output.manufacturer, output.name));
 
   midiOut = WebMidi.getOutputByName("loopMIDI Port");
+}
+
+function holdToggle() {
+	hold = !hold
+	if (hold) {
+		hold_button.html("RELEASE")
+	} else {
+		hold_button.html("HOLD")
+	}
 }
