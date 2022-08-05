@@ -67,7 +67,9 @@ let exciter_history = createRingBuffer(120);
 function createRingBuffer (length) {
   var pointer = 0, buffer = []; 
   return {
-    get  : function(){return buffer[pointer];},
+    get  : function(){
+		return buffer[pointer];
+	},
     push : function(item){
       buffer[pointer] = item;
       pointer = (length + pointer +1) % length;
