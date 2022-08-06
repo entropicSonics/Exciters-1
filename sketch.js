@@ -1,6 +1,6 @@
 // let brushStrokes
 // let numPoints = 20;
-let MIDI_MODE = true
+let MIDI_MODE = false
 
 //Fonts
 let dudler, emeritus;
@@ -16,6 +16,12 @@ let oscillators = []
 let audioContextStarted = false
 
 let midiOut = null
+
+let hold = false
+let exciter_history;
+
+let clickX, clickY;
+let mousePressedDuration = 0;
 
 let notes = [
 	{
@@ -94,6 +100,8 @@ function setup() {
 	for (let i=0; i < notes.length; i++) {
 		floorTiles.push(new FloorTile(0 + (width/notes.length * i), notes[i], reverb))
 	}
+
+	exciter_history = new ExciterBuffer(120)
 }
 
 function draw() {
@@ -135,18 +143,33 @@ function draw() {
 	endShape()
 
 	// Exciters
-	for (let exciter of exciters) {
-		let gravity = createVector(0, 0.5 )
-		exciter.applyForce(gravity)
-		exciter.update()
-		exciter.edges()
-		exciter.show()	
-	}
-
-	for (let i = exciters.length-1; i >=0; i--) {
-		if (exciters[i].finished()) {
-			exciters.splice(i, 1)
+	if (!hold) {
+		for (let exciter of exciters) {
+			gravity = createVector(0, 0.5)
+			exciter.applyForce(gravity)
+			exciter.update()
+			exciter.edges()
+			exciter.show()	
 		}
+
+		for (let i = exciters.length-1; i >=0; i--) {
+			if (exciters[i].finished()) {
+				exciters.splice(i, 1)
+			}
+		}
+
+		// store history
+		exciter_history.pushClone(exciters)
+	} else {
+		// Draw exciter history 
+		exciter_history.show()
+		// Draw current exciters
+		exciters = exciter_history.get()
+		for (let exciter of exciters) {
+			exciter.show()	
+		}
+		// Increment loop timestep
+		exciter_history.incrementTimestep()
 	}
 
 	// Floor tiles
@@ -154,13 +177,33 @@ function draw() {
 		floorTiles[floorTile].show()
 	}
 
-	
+	// Check for intersections
 	for (let exciter in exciters) {
 		for (let floorTile in floorTiles) {
 			floorTiles[floorTile].intersects(exciters[exciter])
 		}
 	}
 
+	// Check for hold
+	if (mouseIsPressed) {
+		if ((mouseX == clickX) && (mouseY == clickY)) {
+			mousePressedDuration += 1
+		} else {
+			mousePressedDuration = 0
+		}
+		if (mousePressedDuration > 20) {
+			hold = true
+		}
+	}  
+
+	if (hold) {
+		fill(255)
+		ellipse(mouseX, mouseY, 60, 60)
+		fill(0)
+		textSize(20)
+		textFont((dudler))
+		text("loop", mouseX-19, mouseY+7)
+	}
 }
 
 function mouseClicked() {
@@ -174,38 +217,48 @@ function mouseClicked() {
 		}
 	}
 
-	exciters.push(new Exciter(mouseX, mouseY, excLifetime))
+	if (!hold) {
+		exciters.push(new Exciter(mouseX, mouseY, excLifetime))
+	}
+	hold = false
 }
 
 function mouseDragged() {
 	// brushStrokes.push(new BrushStroke(mouseX, mouseY))
 
-	trailLifetime = 400
+	if (!hold) {
+		trailLifetime = 400
 
-	if (mouseX < windowWidth && mouseY < windowHeight) {
-		let point = createVector(mouseX, mouseY)
-		points.push(point)
+		if (mouseX < windowWidth && mouseY < windowHeight) {
+			let point = createVector(mouseX, mouseY)
+			points.push(point)
 
-		if (mouseX % 2 == 0) {
-			exciters.push(new Exciter(mouseX, mouseY, excLifetime))
+			if (mouseX % 2 == 0) {
+				exciters.push(new Exciter(mouseX, mouseY, excLifetime))
+			}
 		}
+
+		// Causes exciters to fall in a cool, circular pattern
+		// for (const point in points) {
+		// 	if (mouseX % 10 == 0) {	
+		// 		exciters.push(new Exciter(mouseX, mouseY, excLifetime))
+		// 	}
+		// }
+
+		// console.log(points.length, exciters.length)
 	}
-
-	// Causes exciters to fall in a cool, circular pattern
-	// for (const point in points) {
-	// 	if (mouseX % 10 == 0) {	
-	// 		exciters.push(new Exciter(mouseX, mouseY, excLifetime))
-	// 	}
-	// }
-
-	// console.log(points.length, exciters.length)
 }
 
 function mousePressed() {
 	if (mouseX < window.width && mouseY < window.height) {
 		points = []
 	}
+
+	clickX = mouseX
+	clickY = mouseY
+	mousePressedDuration = 0
 }
+
 
 class Exciter {
 	constructor(x, y, lifetime) {
@@ -233,7 +286,8 @@ class Exciter {
 				this.vel.x = 0
 			}
 			// this.vel.y *= -1.5
-			this.vel.y *= -0.93
+			// this.vel.y *= -0.93
+			this.vel.y *= -1
 		}
 
 		if (this.pos.x < 0 || this.pos.x > width) {
@@ -256,12 +310,73 @@ class Exciter {
 		this.lifetime -= 1
 	}
 
-	show() {
+	show(held=false) {
 		// fill(255)
-		stroke(255, this.lifetime);
-		strokeWeight(1)
+		if (held) {
+			stroke(255, 0.5 * this.lifetime);
+			strokeWeight(0.1)
+		} else {
+			stroke(255, this.lifetime);
+			strokeWeight(1)
+		}
 		ellipse(this.pos.x, this.pos.y, 10, 10)
 	}
+}
+
+class ExciterBuffer {
+    constructor(length) {
+        this.pointer = 0
+        this.buffer = []
+		this.length = length
+    }
+
+    get() {
+		return this.buffer[this.pointer] || [];
+	}
+
+    pushClone(exciters) {
+        let excitersCloned = []
+        for (let exciter of exciters) {
+			let exciter_copy = {}
+			exciter_copy.pos = exciter.pos.copy()
+			exciter_copy.vel = exciter.vel.copy()
+			exciter_copy.acc = exciter.acc.copy()
+			exciter_copy.lifetime = exciter.lifetime
+			exciter_copy.show = exciter.show
+			exciter_copy.finished = exciter.finished
+			exciter_copy.applyForce = exciter.applyForce
+			exciter_copy.edges = exciter.edges
+			exciter_copy.update = exciter.update
+            excitersCloned.push(exciter_copy)
+        }
+      	this.buffer[this.pointer] = excitersCloned;
+      	this.pointer = (this.pointer + 1) % this.length;
+    }
+
+    push(item){
+      	this.buffer[this.pointer] = item;
+      	this.pointer = (this.pointer + 1) % this.length;
+    }
+
+	incrementTimestep() {
+      	this.pointer = (this.pointer + 1) % this.buffer.length;
+	}
+
+    show(trailLength=null) { // TODO: finish implementing this
+	    // if (!trailLength) {
+	    // 	trailLength = this.buffer.length / 4
+	    // }
+		//  	return this.buffer.slice((this.pointer - trailLength) % length, this.pointer)
+		noFill();
+		for(let exciter_frame of this.buffer) {
+			beginShape();
+			for (let exciter of exciter_frame) {
+				exciter.show(alpha)
+				// curveVertex(exciter.pos.x, exciter.pos.y);
+			}
+			endShape();
+		}
+    }
 }
 
 class FloorTile {
@@ -323,9 +438,7 @@ class FloorTile {
 		if (this.hit == true) {
 			// console.log(this.note)
 			this.onHit(other)
-		} else { 
-			console.log('Nothing is hit')
-		}
+		} 
 	}
 
 	show() {
