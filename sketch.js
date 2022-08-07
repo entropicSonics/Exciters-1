@@ -257,6 +257,15 @@ function mouseClicked() {
 }
 
 function mouseDragged() {
+	if (!MIDI_MODE) {
+		if (!audioContextStarted) {
+			userStartAudio();
+			audioContextStarted = true
+			for (osc of oscillators) {
+				osc.start()
+			}
+		}
+	}
 	// brushStrokes.push(new BrushStroke(mouseX, mouseY))
 
 	if (!hold && canvasActive) {
