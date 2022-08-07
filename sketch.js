@@ -162,11 +162,11 @@ function draw() {
 		exciter_history.pushClone(exciters)
 	} else {
 		// Draw exciter history 
-		exciter_history.show()
+		// exciter_history.show()
 		// Draw current exciters
 		exciters = exciter_history.get()
 		for (let exciter of exciters) {
-			exciter.show()	
+			exciter.show(true)	
 		}
 		// Increment loop timestep
 		exciter_history.incrementTimestep()
@@ -313,7 +313,9 @@ class Exciter {
 	show(held=false) {
 		// fill(255)
 		if (held) {
-			stroke(255, 0.5 * this.lifetime);
+			// stroke(255, 0.5 * this.lifetime);
+			fill(255)
+			stroke(255, this.lifetime);
 			strokeWeight(0.1)
 		} else {
 			stroke(255, this.lifetime);
@@ -325,13 +327,14 @@ class Exciter {
 
 class ExciterBuffer {
     constructor(length) {
-        this.pointer = 0
+        this.pointer = 0 // last item added
+		this.read_pointer = 0 // item to read
         this.buffer = []
 		this.length = length
     }
 
     get() {
-		return this.buffer[this.pointer] || [];
+		return this.buffer[this.read_pointer] || [];
 	}
 
     pushClone(exciters) {
@@ -349,17 +352,22 @@ class ExciterBuffer {
 			exciter_copy.update = exciter.update
             excitersCloned.push(exciter_copy)
         }
-      	this.buffer[this.pointer] = excitersCloned;
-      	this.pointer = (this.pointer + 1) % this.length;
+		this.push(excitersCloned)
     }
 
     push(item){
+		this.pointer = this.read_pointer
       	this.buffer[this.pointer] = item;
       	this.pointer = (this.pointer + 1) % this.length;
+		this.read_pointer = this.pointer
     }
 
 	incrementTimestep() {
-      	this.pointer = (this.pointer + 1) % this.buffer.length;
+      	this.read_pointer = (this.read_pointer + 1) % this.buffer.length;
+	}
+
+	plusplus(val) {
+		return (val + 1) % this.buffer.length
 	}
 
     show(trailLength=null) { // TODO: finish implementing this
@@ -368,11 +376,13 @@ class ExciterBuffer {
 	    // }
 		//  	return this.buffer.slice((this.pointer - trailLength) % length, this.pointer)
 		noFill();
-		for(let exciter_frame of this.buffer) {
+		// for(let exciter_frame of this.buffer) {
+		for (let i = this.plusplus(this.pointer); i != this.pointer; i = this.plusplus(i)) {
+			let exciter_frame = this.buffer[i]
 			beginShape();
 			for (let exciter of exciter_frame) {
-				exciter.show(alpha)
-				// curveVertex(exciter.pos.x, exciter.pos.y);
+				// exciter.show(alpha)
+				curveVertex(exciter.pos.x, exciter.pos.y);
 			}
 			endShape();
 		}
