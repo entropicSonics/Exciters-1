@@ -239,6 +239,18 @@ function draw() {
 	}
 }
 
+function touchStarted() {
+	if (!MIDI_MODE) {
+		if (!audioContextStarted) {
+			userStartAudio();
+			audioContextStarted = true
+			for (osc of oscillators) {
+				osc.start()
+			}
+		}
+	}
+  }
+
 function mouseClicked() {
 	if (!MIDI_MODE) {
 		if (!audioContextStarted) {
