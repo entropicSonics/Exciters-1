@@ -23,6 +23,12 @@ let exciter_history;
 let clickX, clickY;
 let mousePressedDuration = 0;
 
+// Param slider
+let button
+let slider
+let sliderWrapper
+let canvasActive = true
+
 let notes = [
 	{
 		noteName: 'A#',
@@ -98,10 +104,35 @@ function setup() {
 	// }
 
 	for (let i=0; i < notes.length; i++) {
-		floorTiles.push(new FloorTile(0 + (width/notes.length * i), notes[i], reverb))
+		floorTiles.push(new FloorTile(notes[i],notes.length, i, reverb))
 	}
 
 	exciter_history = new ExciterBuffer(120)
+
+	// Slider setup
+	const sliderWrapper = createDiv('Slider Wrapper')
+
+	button = createButton("Bounce")
+	sliderWrapper.child(button)
+
+	button.size(200,50)
+	button.position(0,10)
+	button.style("font-family", "Dudler")
+	button.style("font-size", "24px")
+	button.addClass('param')
+
+	button.mouseOver(showSlider)
+	button.mouseOut(hideSlider)
+	
+	slider = createSlider(80, 120, 100)
+	slider.position(button.width-2, 8)
+	slider.addClass('slider')
+	slider.addClass('hidden')
+
+	slider.mouseOver(showSlider)
+	slider.mouseOut(hideSlider);
+
+	sliderWrapper.child(slider)
 }
 
 function draw() {
@@ -145,10 +176,12 @@ function draw() {
 	// Exciters
 	if (!hold) {
 		for (let exciter of exciters) {
+			let val = slider.value()/100
+
 			gravity = createVector(0, 0.5)
 			exciter.applyForce(gravity)
 			exciter.update()
-			exciter.edges()
+			exciter.edges(val)
 			exciter.show()	
 		}
 
@@ -185,7 +218,7 @@ function draw() {
 	}
 
 	// Check for hold
-	if (mouseIsPressed) {
+	if (mouseIsPressed && canvasActive) {
 		if ((mouseX == clickX) && (mouseY == clickY)) {
 			mousePressedDuration += 1
 		} else {
@@ -217,7 +250,7 @@ function mouseClicked() {
 		}
 	}
 
-	if (!hold) {
+	if (!hold && canvasActive) {
 		exciters.push(new Exciter(mouseX, mouseY, excLifetime))
 	}
 	hold = false
@@ -226,14 +259,14 @@ function mouseClicked() {
 function mouseDragged() {
 	// brushStrokes.push(new BrushStroke(mouseX, mouseY))
 
-	if (!hold) {
+	if (!hold && canvasActive) {
 		trailLifetime = 400
 
 		if (mouseX < windowWidth && mouseY < windowHeight) {
 			let point = createVector(mouseX, mouseY)
 			points.push(point)
 
-			if (mouseX % 2 == 0) {
+			if (mouseX % 20 == 0) {
 				exciters.push(new Exciter(mouseX, mouseY, excLifetime))
 			}
 		}
@@ -259,6 +292,19 @@ function mousePressed() {
 	mousePressedDuration = 0
 }
 
+function showSlider() {
+	canvasActive = false
+
+	slider.removeClass('hidden')
+	button.addClass('param-active')
+}
+
+function hideSlider() {
+	canvasActive = true
+
+	slider.addClass('hidden')
+	button.removeClass('param-active')
+}
 
 class Exciter {
 	constructor(x, y, lifetime) {
@@ -276,7 +322,7 @@ class Exciter {
 		this.acc = force
 	}
 
-	edges() {
+	edges(val) {
 		if (this.pos.y >= height - 40) {
 			this.pos.y = height - 40
 			if (this.vel.y > 2) {
@@ -287,7 +333,7 @@ class Exciter {
 			}
 			// this.vel.y *= -1.5
 			// this.vel.y *= -0.93
-			this.vel.y *= -1
+			this.vel.y *= -val
 		}
 
 		if (this.pos.x < 0 || this.pos.x > width) {
@@ -303,7 +349,7 @@ class Exciter {
 		// this.acc.setMag(1)
 
 		this.vel.add(this.acc)
-		this.vel.limit(20)
+		// this.vel.limit(200)
 	
 		this.pos.add(this.vel)
 
@@ -313,10 +359,10 @@ class Exciter {
 	show(held=false) {
 		// fill(255)
 		if (held) {
+
 			// stroke(255, 0.5 * this.lifetime);
-			fill(255)
 			stroke(255, this.lifetime);
-			strokeWeight(0.1)
+			strokeWeight(1)
 		} else {
 			stroke(255, this.lifetime);
 			strokeWeight(1)
@@ -390,9 +436,11 @@ class ExciterBuffer {
 }
 
 class FloorTile {
-	constructor(x, note, reverb) {
-		this.pos = createVector(x, window.height-40)
-		this.width = window.width / notes.length
+	constructor(note, notesLength, index, reverb) {
+		this.index = index
+		this.notesLength = notesLength
+		this.pos = createVector(0 + (windowWidth/this.notesLength * this.index), window.height-40)
+		this.width = window.width / this.notesLength
 		this.height = 40
 		this.fillVal = 200
 		this.note = note
@@ -412,6 +460,12 @@ class FloorTile {
 		}
 
 		this.playing = false
+	}
+
+	updateOnResize() {
+		this.pos.x = 0 + (windowWidth/this.notesLength * this.index)
+		this.pos.y = windowHeight - 40
+		this.width = windowWidth/this.notesLength
 	}
 
 	onHit(other) {
@@ -497,3 +551,10 @@ function onMidiEnabled() {
 
   midiOut = WebMidi.getOutputByName("loopMIDI Port");
 }
+
+function windowResized(){
+	resizeCanvas(windowWidth, windowHeight);
+	for (const floorTile in floorTiles) {
+		floorTiles[floorTile].updateOnResize()
+	}
+  }

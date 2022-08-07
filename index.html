@@ -18,6 +18,85 @@
 			canvas {
 				margin: auto;
 			}
+			body {
+				overflow: hidden; /* Hide scrollbars */
+			}
+
+			.slidecontainer {
+				width: 100%; /* Width of the outside container */
+			}
+
+
+			/* Add focus area around slider to persist even when mouse goes a bit off */
+				
+			/* The slider itself */
+			.slider {
+				-webkit-appearance: none;  /* Override default CSS styles */
+				appearance: none;
+				width: 320px; /* Full-width */
+				height: 50px; /* Specified height */
+				background: rgba(106, 106, 106, 1); /* Grey background */
+				outline: none; /* Remove outline */
+				opacity: 0.5; /* Set transparency (for mouse-over effects on hover) */
+				-webkit-transition: .2s; /* 0.2 seconds transition on hover */
+				transition: opacity .2s;
+				display: inline;
+			}
+
+			/* Mouse-over effects */
+			.slider:hover {
+				opacity: 1; /* Fully shown on mouse-over */
+			}
+
+			/* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */
+			.slider::-webkit-slider-thumb {
+				-webkit-appearance: none; /* Override default look */
+				appearance: none;
+				width: 25px; /* Set a specific slider handle width */
+				height: 50px; /* Slider handle height */
+				background: #ffffff; /* Green background */
+				cursor: pointer; /* Cursor on hover */
+			}
+
+			.slider::-moz-range-thumb {
+				width: 25px; /* Set a specific slider handle width */
+				height: 50px; /* Slider handle height */
+				background: #04AA6D; /* Green background */
+				cursor: pointer; /* Cursor on hover */
+			}
+
+			.hidden {
+				display: none;
+			}
+			
+			.param {
+				border: 1px solid white;
+				background-color: black;
+				color: white
+			}
+
+			.param:hover {
+				border: none;
+				background-color: white;
+				color: black
+			}
+
+			.param-active {
+				border: none;
+				background-color: white;
+				color: black		
+			}
+			
+			.toggle {
+				top: -40px
+			}
+
+			@media only screen and (max-width: 600px) {
+
+				.param {
+					display:none;
+				}
+			}
 		</style>
 	</head>
 	<body></body>
