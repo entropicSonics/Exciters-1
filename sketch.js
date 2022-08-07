@@ -266,7 +266,7 @@ function mouseDragged() {
 			let point = createVector(mouseX, mouseY)
 			points.push(point)
 
-			if (mouseX % 20 == 0) {
+			if (mouseX % 10 == 0) {
 				exciters.push(new Exciter(mouseX, mouseY, excLifetime))
 			}
 		}
